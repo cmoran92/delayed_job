@@ -3,10 +3,21 @@ module Delayed
     # serialize to YAML
     def encode_with(coder)
       coder.map = {
-        'object' => object,
+        'object' => object.is_a?(::ActiveRecord::Base) ? "LOAD;#{object.class};#{object.id}" : object,
         'method_name' => method_name,
         'args' => args
       }
+    end
+
+    def init_with(coder)
+      instance_variable_set(:"@method_name", coder['method_name'])
+      instance_variable_set(:"@args", coder['args'])
+      if coder["object"] =~ /^LOAD;/
+        _load, klass, id = coder["object"].split(';')
+        instance_variable_set(:"@object", klass.constantize.find(id))
+      else
+      instance_variable_set(:"@object", coder['object'])
+      end
     end
   end
 end
